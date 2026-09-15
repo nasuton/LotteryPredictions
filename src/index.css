@@ -1,0 +1,29 @@
+:root {
+  font-family: 'Segoe UI', 'Noto Sans JP', 'Yu Gothic UI', Meiryo, sans-serif;
+  color: #243247;
+  background: #f3f6fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+  line-height: 1.6;
+
+  --text: #243247;
+  --text-muted: #5e6c80;
+  --accent: #215dc1;
+  --surface: #ffffff;
+  --border: #dce3ed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
