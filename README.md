@@ -41,6 +41,10 @@ npm run preview
 | --- | --- |
 | `src/App.tsx` | メイン画面 |
 | `src/App.css` | メイン画面のスタイル |
+| `src/components/StatusPanel.tsx` | 更新状況パネル |
+| `src/hooks/usePredictions.ts` / `src/hooks/useStatus.ts` | 予想一覧・更新状況の取得 |
+| `src/lib/api.ts` | API呼び出し（v1・旧パスフォールバック） |
+| `src/lib/status.ts` | 更新状況の型・検証・日付整形 |
 | `src/index.css` | 共通スタイル・レスポンシブ設定 |
 | `src/main.tsx` | Reactの起動処理 |
 | `vite.config.ts` | Viteの設定 |
@@ -73,14 +77,51 @@ API側ではCORSの許可Originに `https://nasuton.github.io` を設定して�
 ## 予想データの一括取得
 
 - `src/config/api.ts` の `PREDICTIONS_LIMIT = 100` はAPIへの1リクエスト当たりの件数です（1〜100件）。表示件数の上限ではありません。全件を取得するため `PREDICTIONS_OFFSET` は0を使用します。
-- `/health` のHTTP応答が正常かつJSONの `status` が `ok` の場合、予想APIを取得します。
-- レスポンスの `next_url` を順にたどり、最終ページまで自動で取得します。相対URLにも対応し、同じURLへの循環はエラーとして停止します。
+- `/health` のHTTP応答が正常かつJSONの `status` が `ok` の場合、予想API `/api/v1/predictions?limit&offset` を取得します。
+- **旧パスへのフォールバック**: `/api/v1/predictions` が404を返した場合（API側がまだ旧バージョンのとき）だけ、旧パス `/api/predictions` で再試行します。その後の `next_url` 追跡も旧パスに合わせます。フォールバックしたことは `console.info` に1行記録し、画面には表示しません。404以外のエラー（500など）はフォールバックせずエラー表示になります。API側とフロントのデプロイ順序を問わないための仕組みで、API側の移行完了後に削除できます。
+- レスポンスの `next_url` を順にたどり、最終ページまで自動で取得します。相対URLにも対応し、同じURLへの循環や、最初のページと異なるパス（v1 ⇄ 旧）への遷移はエラーとして停止します。
 - 取得中は件数の進捗を表示します。全件取得が完了した時だけOK表示にし、取得結果を `lottery_type` で分類して各タブにまとめて表示します。ページ移動ボタンはありません。
 - 通信失敗時は `api-status--error` に「通信エラー」「データの取得に失敗しました。再試行してください。」と再試行ボタンを表示します。途中までのデータは成功として表示しません。
-- 再試行を押すと、ヘルスチェックから全ページを取得し直します。自動で再試行は行いません。
+- 再試行を押すと、ヘルスチェックから全ページを取得し直します（更新状況も再取得します）。自動で再試行は行いません。
 - HTTPエラー、NG、不正なJSON、15秒のリクエストタイムアウト、総件数に満たない取得結果もエラー表示になります。先頭の0・数字の順序・重複する数字は保持し、同一IDのレコードは重複表示しません。
 - 予想パターンは `pattern`、予想数字は `numbers`、対象抽選日欄は `predicted_at` を表示します。
-- `npm test` で全件取得、途中エラー、手動再取得、URL循環、重複レコード、キャンセル、レスポンス解析などを確認できます。
+- `npm test` で全件取得、途中エラー、手動再取得、URL循環、重複レコード、キャンセル、レスポンス解析、v1→旧パスのフォールバック、更新状況の取得と日付整形などを確認できます。
+
+## 更新状況パネル
+
+タブの上部に、選択中の宝くじ種別の更新状況を表示します（`src/hooks/useStatus.ts`、`src/components/StatusPanel.tsx`、`src/lib/status.ts`）。
+
+- 取得先は `/api/v1/status` です。予想一覧とは独立して取得し、失敗（404を返す旧API・ネットワークエラーなど）した場合はパネルを表示しないだけで、予想一覧の表示には影響しません。再試行ボタンで予想一覧と一緒に再取得します。
+- 表示内容（タブ切替に連動）:
+  - 予想更新日: `by_type[].latest_predicted_at`（例: `2026年9月28日（月）`）。今日より2日以上古い場合は `（N日前）` を付けます。
+  - 予想パターン数: `by_type[].count`
+  - 最終バッチ: その種別の `batch_name === "registration"`（無ければ最も新しい実行）の `status` と `finished_at`（例: `成功 / 9月28日 03:05`）。`success`→成功、`failed`→失敗、`skipped`→スキップ を文字と色の両方で示し、失敗時は「表示中の予想は前回のものです。」を補足します。`last_batch_runs` が `null` のときはこの行を表示しません。
+- `latest_predicted_at` は `YYYY-MM-DD` の日付のみなので、UTC解釈で前日にずれないよう文字列を分解してローカル日付として扱います。`finished_at` はオフセット付きISO文字列のため、そのまま閲覧者のローカル時刻で表示します。
+- 読み上げ環境向けに `<section aria-labelledby>` と `<dl>` で構造化し、`<time dateTime>` を使います。タブ切替のたびに読み上げられるのを避けるため `aria-live` は付けていません。
+
+`/api/v1/status` のレスポンス形:
+
+```json
+{"data": {
+  "predictions": {"total": 305,
+    "by_type": [{"lottery_type": "loto6", "count": 43, "latest_predicted_at": "2026-09-28"}]},
+  "last_batch_runs": [{"batch_name": "registration", "lottery_type": "loto6", "status": "success",
+    "started_at": "2026-09-28T03:05:00+09:00", "finished_at": "2026-09-28T03:05:12+09:00",
+    "rows_affected": 43, "message": ""}],
+  "generated_at": "2026-09-28T12:00:00+09:00"}}
+```
+
+`last_batch_runs` は `null`、`by_type` は空配列の場合があります。未知の `lottery_type` や `status` の要素は無視します。
+
+### ブラウザでの手動確認
+
+`tests/browser/status-panel.browser.mjs` は Playwright（Edge）でビルド済みの `dist/` を開き、APIを `page.route` でモックして更新状況パネル・タブ連動・404時の非表示・再試行・旧パスフォールバック・axe（WCAG 2.1 AA）・390×844表示を確認します。`npm test` には含まれず、依存関係も `package.json` に追加していません。
+
+```powershell
+npm run build
+npm i --no-save playwright-core axe-core
+node tests/browser/status-panel.browser.mjs
+```
 
 ## ページ下部の技術構成とリンク
 
