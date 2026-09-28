@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { usePredictions } from './hooks/usePredictions'
+import { useStatus } from './hooks/useStatus'
 import { FETCH_ERROR_MESSAGE } from './lib/api'
 import { lotteries, predictionsForLottery } from './lib/predictions'
 import type { LotteryId } from './lib/predictions'
 import { SiteFooter } from './components/SiteFooter'
+import { StatusPanel } from './components/StatusPanel'
 
 import './App.css'
 
@@ -12,6 +14,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<LotteryId>('numbers3')
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { state, retry } = usePredictions()
+  const { state: statusState, reload: reloadStatus } = useStatus()
+  const activeLottery = lotteries.find((lottery) => lottery.id === activeTab) ?? lotteries[0]
   const isLoading = state.phase === 'checking' || state.phase === 'loading'
   const statusLabel = { checking: '確認中', loading: '取得中', success: 'OK', error: '通信エラー' }[state.phase]
   const statusMessage = {
@@ -22,6 +26,11 @@ function App() {
     success: state.phase === 'success' ? '全' + state.predictions.length + '件の予想データを取得しました。' : '',
     error: FETCH_ERROR_MESSAGE + '。再試行してください。',
   }[state.phase]
+
+  function handleRetry() {
+    retry()
+    reloadStatus()
+  }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex: number
@@ -68,11 +77,13 @@ function App() {
             <span>{statusMessage}</span>
           </p>
           {state.phase === 'error' && (
-            <button type="button" className="retry-button" onClick={retry}>再試行</button>
+            <button type="button" className="retry-button" onClick={handleRetry}>再試行</button>
           )}
         </div>
 
-<div className="lottery-workspace">
+        <StatusPanel state={statusState} lotteryId={activeLottery.id} lotteryName={activeLottery.name} />
+
+        <div className="lottery-workspace">
           <div className="lottery-tabs" role="tablist" aria-label="宝くじの種類">
             {lotteries.map((lottery, index) => (
               <button
@@ -127,7 +138,8 @@ function App() {
                         <tr key={prediction.id}>
                           <td>{prediction.pattern}</td>
                           <td>
-                            <div className="prediction-numbers" aria-label={prediction.numbers.join('、')}>
+                            <div className="prediction-numbers">
+                              <span className="visually-hidden">{prediction.numbers.join('、')}</span>
                               {prediction.numbers.map((number, index) => (
                                 <span className="number-chip" key={index} aria-hidden="true">{number}</span>
                               ))}
