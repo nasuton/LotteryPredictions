@@ -1,7 +1,26 @@
 import { parsePredictionPage, resolvePredictionUrl } from './predictions.ts'
+import { parseStatus } from './status.ts'
+import type { ApiStatus } from './status.ts'
 
 export const FETCH_ERROR_MESSAGE = 'データの取得に失敗しました'
 const REQUEST_TIMEOUT_MS = 15_000
+
+// API v1 paths. The legacy predictions path is used only when v1 responds
+// with 404, so the API and this front end can be deployed in either order.
+export const PREDICTIONS_PATH = '/api/v1/predictions'
+export const LEGACY_PREDICTIONS_PATH = '/api/predictions'
+export const STATUS_PATH = '/api/v1/status'
+export const HEALTH_PATH = '/health'
+
+export class HttpError extends Error {
+  readonly status: number
+
+  constructor(status: number) {
+    super(FETCH_ERROR_MESSAGE)
+    this.name = 'HttpError'
+    this.status = status
+  }
+}
 
 interface LoadOptions {
   baseUrl: string
@@ -19,17 +38,25 @@ async function requestJson(url: string, signal: AbortSignal): Promise<unknown> {
   })
 
   if (!response.ok) {
-    throw new Error(FETCH_ERROR_MESSAGE)
+    throw new HttpError(response.status)
   }
 
   return response.json()
 }
 
-export async function loadPredictionData({
-  baseUrl, limit, offset, signal, onHealthy,
-}: LoadOptions): Promise<unknown> {
-  const root = baseUrl.replace(/\/+$/, '')
-  const health = await requestJson(`${root}/health`, signal)
+function apiRoot(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '')
+}
+
+function predictionsQuery({ limit, offset }: Pick<LoadOptions, 'limit' | 'offset'>): string {
+  return new URLSearchParams({
+    limit: String(Math.min(100, Math.max(1, Math.trunc(limit)))),
+    offset: String(offset),
+  }).toString()
+}
+
+async function checkHealth({ baseUrl, signal, onHealthy }: LoadOptions): Promise<void> {
+  const health = await requestJson(`${apiRoot(baseUrl)}${HEALTH_PATH}`, signal)
 
   if (
     typeof health !== 'object' || health === null ||
@@ -40,22 +67,58 @@ export async function loadPredictionData({
 
   signal.throwIfAborted()
   onHealthy?.()
+}
 
-  const query = new URLSearchParams({ limit: String(Math.min(100, Math.max(1, Math.trunc(limit)))), offset: String(offset) })
-  return requestJson(`${root}/api/predictions?${query}`, signal)
+interface FirstPage {
+  payload: unknown
+  url: string
+}
+
+async function loadFirstPage(options: LoadOptions): Promise<FirstPage> {
+  await checkHealth(options)
+
+  const root = apiRoot(options.baseUrl)
+  const query = predictionsQuery(options)
+  const url = `${root}${PREDICTIONS_PATH}?${query}`
+
+  try {
+    return { payload: await requestJson(url, options.signal), url }
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status !== 404) throw error
+  }
+
+  options.signal.throwIfAborted()
+  console.info(`[api] ${PREDICTIONS_PATH} が 404 のため旧パス ${LEGACY_PREDICTIONS_PATH} で再試行します`)
+  const legacyUrl = `${root}${LEGACY_PREDICTIONS_PATH}?${query}`
+  return { payload: await requestJson(legacyUrl, options.signal), url: legacyUrl }
+}
+
+export async function loadPredictionData(options: LoadOptions): Promise<unknown> {
+  return (await loadFirstPage(options)).payload
+}
+
+// A next-page URL must stay on the same path family that served the first page
+// (v1 or legacy); anything else is rejected.
+function resolvePageUrl(value: string, options: LoadOptions): string {
+  const root = apiRoot(options.baseUrl)
+  const query = predictionsQuery(options)
+  let lastError: unknown
+  for (const path of [PREDICTIONS_PATH, LEGACY_PREDICTIONS_PATH]) {
+    try {
+      return resolvePredictionUrl(value, `${root}${path}?${query}`)
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError
 }
 
 export async function loadPredictionPage(options: LoadOptions & { url?: string }) {
-  const root = options.baseUrl.replace(/\/+$/, '')
-  const query = new URLSearchParams({
-    limit: String(Math.min(100, Math.max(1, Math.trunc(options.limit)))),
-    offset: String(options.offset),
-  })
-  const initialUrl = `${root}/api/predictions?${query}`
-  const url = options.url ? resolvePredictionUrl(options.url, initialUrl) : initialUrl
-  const payload = options.url
-    ? await requestJson(url, options.signal)
-    : await loadPredictionData(options)
+  if (options.url) {
+    const url = resolvePageUrl(options.url, options)
+    return parsePredictionPage(await requestJson(url, options.signal), url)
+  }
+  const { payload, url } = await loadFirstPage(options)
   return parsePredictionPage(payload, url)
 }
 
@@ -91,4 +154,12 @@ export async function loadAllPredictions(
     throw new Error(FETCH_ERROR_MESSAGE)
   }
   return [...predictions.values()]
+}
+
+// Independent of the predictions load: failures here must not block the list.
+export async function fetchStatus(
+  { baseUrl, signal }: Pick<LoadOptions, 'baseUrl' | 'signal'>,
+): Promise<ApiStatus> {
+  const payload = await requestJson(`${apiRoot(baseUrl)}${STATUS_PATH}`, signal)
+  return parseStatus(payload)
 }

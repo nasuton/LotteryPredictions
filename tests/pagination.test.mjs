@@ -4,15 +4,15 @@ import { loadPredictionPage, FETCH_ERROR_MESSAGE } from '../src/lib/api.ts'
 import { parsePredictionPage, predictionsForLottery } from '../src/lib/predictions.ts'
 
 const root = 'https://example.test/lottery'
-const firstUrl = `${root}/api/predictions?limit=100&offset=0`
-const nextUrl = `${root}/api/predictions?limit=100&offset=100`
+const firstUrl = `${root}/api/v1/predictions?limit=100&offset=0`
+const nextUrl = `${root}/api/v1/predictions?limit=100&offset=100`
 const record = (id, lottery_type = 'numbers3') => ({
   id, lottery_type, pattern: '予想パターン', predicted_at: '2026-09-15', numbers: ['0', '3', '3'],
 })
 const firstPayload = {
   data: Array.from({ length: 100 }, (_, i) => record(i)),
   limit: 100, offset: 0, total: 112,
-  next_url: '/lottery/api/predictions?limit=100&offset=100',
+  next_url: '/lottery/api/v1/predictions?limit=100&offset=100',
 }
 const lastPayload = {
   data: Array.from({ length: 12 }, (_, i) => record(i + 100, 'loto7')),
@@ -42,7 +42,7 @@ test('100 + 12 records: follows next_url only when requested and stops at the la
   assert.deepEqual(calls, [`${root}/health`, firstUrl, nextUrl])
 })
 
-for (const link of [nextUrl, '/lottery/api/predictions?limit=100&offset=100', '?limit=100&offset=100']) {
+for (const link of [nextUrl, '/lottery/api/v1/predictions?limit=100&offset=100', '?limit=100&offset=100']) {
   test(`supports next URL format: ${link}`, () => {
     assert.equal(parsePredictionPage({ ...firstPayload, next_url: link }, firstUrl).nextUrl, nextUrl)
   })
@@ -54,14 +54,14 @@ for (const link of [null, undefined, '']) {
   })
 }
 
-for (const link of ['https://other.test/lottery/api/predictions', '/other-path', firstUrl]) {
+for (const link of ['https://other.test/lottery/api/v1/predictions', '/other-path', firstUrl]) {
   test(`invalid or repeating next URL rejected: ${link}`, () => {
     assert.throws(() => parsePredictionPage({ ...firstPayload, next_url: link }, firstUrl))
   })
 }
 
 test('next request uses server URL as-is, including cursor query parameters', async (t) => {
-  const url = `${root}/api/predictions?cursor=page-two&limit=25`
+  const url = `${root}/api/v1/predictions?cursor=page-two&limit=25`
   const calls = []
   t.mock.method(globalThis, 'fetch', async (input) => { calls.push(input); return json(lastPayload) })
   await loadPredictionPage({ ...options(), url })
