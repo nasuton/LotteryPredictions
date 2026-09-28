@@ -3,8 +3,9 @@ import type { KeyboardEvent } from 'react'
 import { usePredictions } from './hooks/usePredictions'
 import { useStatus } from './hooks/useStatus'
 import { FETCH_ERROR_MESSAGE } from './lib/api'
+import { buildPredictionsCsv, downloadCsv, predictionsCsvFileName } from './lib/csv'
 import { lotteries, predictionsForLottery } from './lib/predictions'
-import type { LotteryId } from './lib/predictions'
+import type { LotteryId, Prediction } from './lib/predictions'
 import { SiteFooter } from './components/SiteFooter'
 import { StatusPanel } from './components/StatusPanel'
 
@@ -30,6 +31,10 @@ function App() {
   function handleRetry() {
     retry()
     reloadStatus()
+  }
+
+  function handleDownloadCsv(lottery: (typeof lotteries)[number], rows: Prediction[]) {
+    downloadCsv(predictionsCsvFileName(lottery.id), buildPredictionsCsv(rows, lottery.name))
   }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -123,6 +128,16 @@ function App() {
                 <div className="panel-heading">
                   <h2>{lottery.name}</h2>
                   {state.phase === 'success' && <span className="record-count">{rows.length}件</span>}
+                  {state.phase === 'success' && rows.length > 0 && (
+                    <button
+                      type="button"
+                      className="csv-button"
+                      aria-label={`${lottery.name}の予想をCSVファイルでダウンロード`}
+                      onClick={() => handleDownloadCsv(lottery, rows)}
+                    >
+                      CSVダウンロード
+                    </button>
+                  )}
                 </div>
                 {state.phase === 'success' && rows.length > 0 ? (
                   <table className="prediction-table" aria-label={`${lottery.name}の予想一覧`}>

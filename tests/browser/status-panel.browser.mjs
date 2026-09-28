@@ -253,6 +253,24 @@ await scenario('8 legacy API (v1 404) still loads predictions and logs one info 
   assert.equal(consoleInfos.filter((text) => text.includes('/api/predictions')).length, 1)
 })
 
+await scenario('9 CSV download exports only the selected tab', { status: json(statusPayload()) }, async ({ page }) => {
+  await waitForLoaded(page)
+  // The button is hidden while loading and appears per visible tab only.
+  assert.equal(await page.getByRole('button', { name: /CSVファイルでダウンロード/ }).count(), 1)
+  await page.getByRole('tab', { name: 'loto6' }).click()
+  const button = page.getByRole('button', { name: 'ロト6の予想をCSVファイルでダウンロード' })
+  await button.waitFor()
+  const [download] = await Promise.all([page.waitForEvent('download'), button.click()])
+  assert.match(download.suggestedFilename(), /^predictions_loto6_\d{8}\.csv$/)
+  const csv = await readFile(await download.path(), 'utf8')
+  const lines = csv.split('\r\n')
+  assert.equal(lines[0], '\uFEFF宝くじ,予想パターン,予想数字,対象抽選日')
+  assert.deepEqual(lines.slice(1, 4), [1, 2, 3].map((i) => `ロト6,予想パターン${i},1 12 23 34 41,${today}`))
+  assert.equal(lines.length, 5, 'header + 3 rows + trailing newline')
+  assert.ok(!csv.includes('ナンバーズ3'))
+  assert.deepEqual(await runAxe(page), [])
+})
+
 await browser.close()
 server.close()
 console.log(results.join('\n'))

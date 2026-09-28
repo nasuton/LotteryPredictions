@@ -45,6 +45,7 @@ npm run preview
 | `src/hooks/usePredictions.ts` / `src/hooks/useStatus.ts` | 予想一覧・更新状況の取得 |
 | `src/lib/api.ts` | API呼び出し（v1・旧パスフォールバック） |
 | `src/lib/status.ts` | 更新状況の型・検証・日付整形 |
+| `src/lib/csv.ts` | 選択中タブの予想をCSVに変換・ダウンロード |
 | `src/index.css` | 共通スタイル・レスポンシブ設定 |
 | `src/main.tsx` | Reactの起動処理 |
 | `vite.config.ts` | Viteの設定 |
@@ -85,6 +86,7 @@ API側ではCORSの許可Originに `https://nasuton.github.io` を設定して�
 - 再試行を押すと、ヘルスチェックから全ページを取得し直します（更新状況も再取得します）。自動で再試行は行いません。
 - HTTPエラー、NG、不正なJSON、15秒のリクエストタイムアウト、総件数に満たない取得結果もエラー表示になります。先頭の0・数字の順序・重複する数字は保持し、同一IDのレコードは重複表示しません。
 - 予想パターンは `pattern`、予想数字は `numbers`、対象抽選日欄は `predicted_at` を表示します。
+- 各タブ見出しの「CSVダウンロード」ボタンで、**選択中のタブの予想だけ**をCSVファイルとして保存できます（`src/lib/csv.ts`）。列は `宝くじ,予想パターン,予想数字,対象抽選日`、予想数字は先頭の0と順序を保つため半角スペース区切りの文字列です。Excelで文字化けしないようUTF-8 BOM付き・CRLF改行で出力し、ファイル名は `predictions_<種別ID>_<YYYYMMDD>.csv` です。データ取得が完了し、その種別の予想が1件以上あるときだけボタンを表示します。
 - `npm test` で全件取得、途中エラー、手動再取得、URL循環、重複レコード、キャンセル、レスポンス解析、v1→旧パスのフォールバック、更新状況の取得と日付整形などを確認できます。
 
 ## 更新状況パネル
@@ -115,7 +117,7 @@ API側ではCORSの許可Originに `https://nasuton.github.io` を設定して�
 
 ### ブラウザでの手動確認
 
-`tests/browser/status-panel.browser.mjs` は Playwright（Edge）でビルド済みの `dist/` を開き、APIを `page.route` でモックして更新状況パネル・タブ連動・404時の非表示・再試行・旧パスフォールバック・axe（WCAG 2.1 AA）・390×844表示を確認します。`npm test` には含まれず、依存関係も `package.json` に追加していません。
+`tests/browser/status-panel.browser.mjs` は Playwright（Edge）でビルド済みの `dist/` を開き、APIを `page.route` でモックして更新状況パネル・タブ連動・404時の非表示・再試行・旧パスフォールバック・CSVダウンロード・axe（WCAG 2.1 AA）・390×844表示を確認します。`npm test` には含まれず、依存関係も `package.json` に追加していません。
 
 ```powershell
 npm run build

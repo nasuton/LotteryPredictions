@@ -214,6 +214,7 @@
 
 .panel-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
   margin-bottom: 24px;
@@ -226,6 +227,30 @@
 .record-count {
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+.csv-button {
+  align-self: center;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.csv-button:hover {
+  background: #eef3fa;
+}
+
+.csv-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .prediction-table {
