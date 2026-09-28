@@ -56,6 +56,8 @@ function App() {
         <p>宝くじの種類を選択してください。</p>
         <p className="prediction-notice">
           <strong>本ページで公開している予想情報は、当せんを保証するものではありません。</strong>
+          <br />
+          選択された数字は、複数の予想パターンで重複している場合があります。
         </p>
       </header>
 
