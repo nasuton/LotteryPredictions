@@ -53,7 +53,8 @@
 }
 
 .status-stale,
-.status-separator {
+.status-separator,
+.status-timezone {
   color: var(--text-muted);
   font-size: 0.8125rem;
   font-weight: 500;

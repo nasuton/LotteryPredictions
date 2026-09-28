@@ -87,8 +87,8 @@ const browser = await chromium.launch({ executablePath: EDGE_PATH, headless: tru
 const results = []
 let failures = 0
 
-async function scenario(name, { status, health = json({ status: 'ok' }), legacyOnly = false, viewport = { width: 1280, height: 900 } }, check) {
-  const context = await browser.newContext({ viewport, locale: 'ja-JP', timezoneId: 'Asia/Tokyo' })
+async function scenario(name, { status, health = json({ status: 'ok' }), legacyOnly = false, viewport = { width: 1280, height: 900 }, timezoneId = 'Asia/Tokyo' }, check) {
+  const context = await browser.newContext({ viewport, locale: 'ja-JP', timezoneId })
   const page = await context.newPage()
   const consoleErrors = []
   const consoleInfos = []
@@ -147,14 +147,15 @@ async function runAxe(page) {
 
 const todayLabel = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'long', timeZone: 'Asia/Tokyo' }).format(new Date())
 
-await scenario('1 normal response shows the panel and follows the selected tab', { status: json(statusPayload()) }, async ({ page, requests }) => {
+// A Los Angeles viewer must still see JST batch times and JST-based staleness.
+await scenario('1 normal response shows the panel and follows the selected tab (viewer in Los Angeles, times in JST)', { status: json(statusPayload()), timezoneId: 'America/Los_Angeles' }, async ({ page, requests }) => {
   await waitForLoaded(page)
   await panel(page).waitFor()
   await page.getByRole('heading', { level: 2, name: '更新状況（ナンバーズ3）' }).waitFor()
   assert.match(await item(page, '予想更新日').innerText(), new RegExp(`^${todayLabel}（.）$`))
   assert.equal(await item(page, '予想更新日').locator('time').getAttribute('dateTime'), today)
   assert.equal(await item(page, '予想パターン数').innerText(), '120件')
-  assert.equal((await item(page, '最終バッチ').innerText()).replace(/\s+/g, ' '), '成功 / 9月28日 03:05')
+  assert.equal((await item(page, '最終バッチ').innerText()).replace(/\s+/g, ' '), '成功 / 9月28日 03:05 （日本時間）')
   assert.equal(await item(page, '最終バッチ').locator('time').getAttribute('dateTime'), '2026-09-27T18:05:12.000Z')
   assert.equal(await panel(page).locator('.status-note').count(), 0)
   assert.equal(await panel(page).getAttribute('aria-live'), null)

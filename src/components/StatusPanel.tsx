@@ -20,7 +20,7 @@ export function StatusPanel({ state, lotteryId, lotteryName }: StatusPanelProps)
 
   const summary = summaryForLottery(state.status, lotteryId)
   const latestDate = summary ? parseLocalDate(summary.latest_predicted_at) : null
-  const stale = latestDate ? staleNote(latestDate) : null
+  const stale = summary ? staleNote(summary.latest_predicted_at) : null
   const run = batchRunForLottery(state.status, lotteryId)
   const runDate = run ? parseDateTime(run.finished_at || run.started_at) : null
 
@@ -54,6 +54,7 @@ export function StatusPanel({ state, lotteryId, lotteryName }: StatusPanelProps)
                 <>
                   <span className="status-separator" aria-hidden="true">/</span>
                   <time dateTime={runDate.toISOString()}>{formatBatchTime(runDate)}</time>
+                  <span className="status-timezone">（日本時間）</span>
                 </>
               )}
             </dd>

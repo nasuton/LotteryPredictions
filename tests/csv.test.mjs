@@ -46,7 +46,9 @@ test('escapeCsvField quotes only when needed', () => {
   assert.equal(escapeCsvField(''), '')
 })
 
-test('file name includes the lottery id and the local date', () => {
-  assert.equal(predictionsCsvFileName('numbers3', new Date(2026, 8, 29, 8, 30)), 'predictions_numbers3_20260929.csv')
-  assert.equal(predictionsCsvFileName('loto7', new Date(2026, 0, 5)), 'predictions_loto7_20260105.csv')
+test('file name includes the lottery id and the JST date', () => {
+  assert.equal(predictionsCsvFileName('numbers3', new Date('2026-09-29T08:30:00+09:00')), 'predictions_numbers3_20260929.csv')
+  assert.equal(predictionsCsvFileName('loto7', new Date('2026-01-05T00:00:00+09:00')), 'predictions_loto7_20260105.csv')
+  // 2026-09-28T20:00Z is already the 29th in Japan.
+  assert.equal(predictionsCsvFileName('loto6', new Date('2026-09-28T20:00:00Z')), 'predictions_loto6_20260929.csv')
 })

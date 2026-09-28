@@ -1,4 +1,5 @@
 import type { Prediction } from './predictions.ts'
+import { toJstDateOnly } from './status.ts'
 
 export const CSV_HEADER = ['宝くじ', '予想パターン', '予想数字', '対象抽選日'] as const
 
@@ -21,10 +22,9 @@ export function buildPredictionsCsv(predictions: readonly Prediction[], lotteryN
   return BOM + [CSV_HEADER, ...rows].map((row) => row.map(escapeCsvField).join(',')).join(NEWLINE) + NEWLINE
 }
 
-export function predictionsCsvFileName(lotteryId: string, date: Date = new Date()): string {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`
-  return `predictions_${lotteryId}_${stamp}.csv`
+// The date stamp is the JST calendar date, matching the dates shown on the page.
+export function predictionsCsvFileName(lotteryId: string, now: Date = new Date()): string {
+  return `predictions_${lotteryId}_${toJstDateOnly(now).replaceAll('-', '')}.csv`
 }
 
 export function downloadCsv(fileName: string, csv: string): void {

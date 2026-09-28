@@ -154,8 +154,12 @@ export function formatLongDate(date: Date, timeZone?: string): string {
   return `${long}（${weekday}）`
 }
 
-// e.g. 9月28日 03:05
-export function formatBatchTime(date: Date, timeZone?: string): string {
+// All times shown in the UI are JST: the API records batch runs and prediction
+// dates in Japan time, so viewers abroad see the same values as the batch logs.
+export const JST = 'Asia/Tokyo'
+
+// e.g. 9月28日 03:05 (JST)
+export function formatBatchTime(date: Date, timeZone: string = JST): string {
   const day = new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric', timeZone }).format(date)
   const time = new Intl.DateTimeFormat('ja-JP', {
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone,
@@ -163,15 +167,32 @@ export function formatBatchTime(date: Date, timeZone?: string): string {
   return `${day} ${time}`
 }
 
-// Whole calendar days from `date` to `today`, both in local time.
-export function daysAgo(date: Date, today: Date = new Date()): number {
-  const start = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-  const end = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+// Calendar date (`YYYY-MM-DD`) of an instant in JST, independent of the viewer's zone.
+export function toJstDateOnly(instant: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: JST,
+  }).formatToParts(instant)
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function dateOnlyToUtc(value: string): number | null {
+  const match = DATE_ONLY.exec(value)
+  if (!match) return null
+  const [, year, month, day] = match
+  return Date.UTC(Number(year), Number(month) - 1, Number(day))
+}
+
+// Whole calendar days from a `YYYY-MM-DD` (JST) value to today's JST date.
+export function daysAgo(dateOnly: string, now: Date = new Date()): number | null {
+  const start = dateOnlyToUtc(dateOnly)
+  const end = dateOnlyToUtc(toJstDateOnly(now))
+  if (start === null || end === null) return null
   return Math.round((end - start) / 86_400_000)
 }
 
-// Returns a "N 日前" note only when the latest prediction is at least 2 days old.
-export function staleNote(date: Date, today: Date = new Date()): string | null {
-  const days = daysAgo(date, today)
-  return days >= STALE_AFTER_DAYS ? `${days}日前` : null
+// Returns a "N 日前" note only when the latest prediction is at least 2 days old (JST).
+export function staleNote(dateOnly: string, now: Date = new Date()): string | null {
+  const days = daysAgo(dateOnly, now)
+  return days !== null && days >= STALE_AFTER_DAYS ? `${days}日前` : null
 }
