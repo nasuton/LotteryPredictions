@@ -1,0 +1,107 @@
+.status-panel {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.status-panel-title {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.status-panel-target {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0;
+}
+
+.status-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.status-item dt {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.status-item dd {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.status-stale,
+.status-separator,
+.status-timezone {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* Status is conveyed by the label text; color is only a secondary cue. */
+.batch-status {
+  display: inline-block;
+  padding: 1px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.batch-status--success {
+  border-color: #b8dfc6;
+  background: #e8f6ec;
+  color: #1d5e37;
+}
+
+.batch-status--failed {
+  border-color: #efc4c4;
+  background: #fdeeee;
+  color: #9c2b2b;
+}
+
+.batch-status--skipped {
+  border-color: #d5dbe4;
+  background: #eef1f5;
+  color: #4a5768;
+}
+
+.status-note {
+  margin: 10px 0 0;
+  color: #9c2b2b;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+  .status-panel {
+    padding: 14px 16px;
+  }
+
+  .status-list {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

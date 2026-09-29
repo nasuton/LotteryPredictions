@@ -26,7 +26,7 @@ test('health succeeds before requesting predictions; custom limit is sent', asyn
   assert.deepEqual(result, payload)
   assert.deepEqual(events, [
     'https://example.test/lottery/health', 'healthy',
-    'https://example.test/lottery/api/predictions?limit=100&offset=0',
+    'https://example.test/lottery/api/v1/predictions?limit=100&offset=0',
   ])
 })
 
@@ -49,7 +49,7 @@ for (const code of [403, 404, 500]) {
 test('predictions HTTP error is rejected after a successful health check', async (t) => {
   let call = 0
   t.mock.method(globalThis, 'fetch', async () =>
-    ++call === 1 ? json({ status: 'ok' }) : json({}, 404))
+    ++call === 1 ? json({ status: 'ok' }) : json({}, 500))
   await assert.rejects(loadPredictionData(options()), { message: FETCH_ERROR_MESSAGE })
   assert.equal(call, 2)
 })

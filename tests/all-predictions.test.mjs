@@ -3,14 +3,14 @@ import { test } from 'node:test'
 import { loadAllPredictions, FETCH_ERROR_MESSAGE } from '../src/lib/api.ts'
 
 const root = 'https://example.test/lottery'
-const firstUrl = `${root}/api/predictions?limit=100&offset=0`
-const nextUrl = `${root}/api/predictions?limit=100&offset=100`
+const firstUrl = `${root}/api/v1/predictions?limit=100&offset=0`
+const nextUrl = `${root}/api/v1/predictions?limit=100&offset=100`
 const record = (id, lottery_type = 'numbers3') => ({
   id, lottery_type, pattern: '予想', predicted_at: '2026-09-15', numbers: ['0', '3', '3'],
 })
 const first = {
   data: Array.from({ length: 100 }, (_, i) => record(i)),
-  limit: 100, offset: 0, total: 112, next_url: '/lottery/api/predictions?limit=100&offset=100',
+  limit: 100, offset: 0, total: 112, next_url: '/lottery/api/v1/predictions?limit=100&offset=100',
 }
 const last = {
   data: Array.from({ length: 12 }, (_, i) => record(i + 100, 'loto7')),
@@ -63,7 +63,7 @@ test('an earlier next URL stops the chain without another request', async (t) =>
 })
 
 test('query parameter order does not bypass loop detection', async (t) => {
-  const calls = mockPages(t, { ...last, next_url: `${root}/api/predictions?offset=0&limit=100` })
+  const calls = mockPages(t, { ...last, next_url: `${root}/api/v1/predictions?offset=0&limit=100` })
   await assert.rejects(loadAllPredictions(options()), { message: FETCH_ERROR_MESSAGE })
   assert.equal(calls.length, 3)
 })
