@@ -1,6 +1,8 @@
 import { parsePredictionPage, resolvePredictionUrl } from './predictions.ts'
 import { parseStatus } from './status.ts'
 import type { ApiStatus } from './status.ts'
+import { hitRateKey, parseHitRatePage } from './hitRates.ts'
+import type { LotteryHitRate } from './hitRates.ts'
 
 export const FETCH_ERROR_MESSAGE = 'データの取得に失敗しました'
 const REQUEST_TIMEOUT_MS = 15_000
@@ -11,6 +13,7 @@ export const PREDICTIONS_PATH = '/api/v1/predictions'
 export const LEGACY_PREDICTIONS_PATH = '/api/predictions'
 export const STATUS_PATH = '/api/v1/status'
 export const HEALTH_PATH = '/health'
+export const HIT_RATES_PATH = '/api/v1/lottery_hit_rates'
 
 export class HttpError extends Error {
   readonly status: number
@@ -162,4 +165,32 @@ export async function fetchStatus(
 ): Promise<ApiStatus> {
   const payload = await requestJson(`${apiRoot(baseUrl)}${STATUS_PATH}`, signal)
   return parseStatus(payload)
+}
+
+export async function loadAllHitRates(
+  { baseUrl, signal }: Pick<LoadOptions, 'baseUrl' | 'signal'>,
+): Promise<LotteryHitRate[]> {
+  let url: string | null = `${apiRoot(baseUrl)}${HIT_RATES_PATH}?limit=100&offset=0`
+  const visited = new Set<string>()
+  const hitRates = new Map<string, LotteryHitRate>()
+  let total: number | null = null
+
+  while (url) {
+    signal.throwIfAborted()
+    const key = new URL(url)
+    key.searchParams.sort()
+    if (visited.has(key.href)) throw new Error(FETCH_ERROR_MESSAGE)
+    visited.add(key.href)
+
+    const page = parseHitRatePage(await requestJson(url, signal), url)
+    signal.throwIfAborted()
+    total ??= page.total
+    for (const rate of page.hitRates) {
+      hitRates.set(hitRateKey(rate.lottery_type, rate.pattern), rate)
+    }
+    url = page.nextUrl
+  }
+
+  if (hitRates.size !== total) throw new Error(FETCH_ERROR_MESSAGE)
+  return [...hitRates.values()]
 }
