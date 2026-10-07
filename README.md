@@ -45,6 +45,7 @@ npm run preview
 | `src/hooks/usePredictions.ts` / `src/hooks/useStatus.ts` | 予想一覧・更新状況の取得 |
 | `src/lib/api.ts` | API呼び出し（v1・旧パスフォールバック） |
 | `src/lib/status.ts` | 更新状況の型・検証・日付整形 |
+| `src/hooks/useHitRates.ts` / `src/lib/hitRates.ts` / `src/components/PredictionHitRate.tsx` | パターン別ヒット率の取得・検証・表示 |
 | `src/lib/csv.ts` | 選択中タブの予想をCSVに変換・ダウンロード |
 | `src/index.css` | 共通スタイル・レスポンシブ設定 |
 | `src/main.tsx` | Reactの起動処理 |
@@ -88,6 +89,14 @@ API側ではCORSの許可Originに `https://nasuton.github.io` を設定して�
 - 予想パターンは `pattern`、予想数字は `numbers`、対象抽選日欄は `predicted_at` を表示します。
 - 各タブ見出しの「CSVダウンロード」ボタンで、**選択中のタブの予想だけ**をCSVファイルとして保存できます（`src/lib/csv.ts`）。列は `宝くじ,予想パターン,予想数字,対象抽選日`、予想数字は先頭の0と順序を保つため半角スペース区切りの文字列です。Excelで文字化けしないようUTF-8 BOM付き・CRLF改行で出力し、ファイル名は `predictions_<種別ID>_<YYYYMMDD>.csv`（日付は日本時間）です。データ取得が完了し、その種別の予想が1件以上あるときだけボタンを表示します。
 - `npm test` で全件取得、途中エラー、手動再取得、URL循環、重複レコード、キャンセル、レスポンス解析、v1→旧パスのフォールバック、更新状況の取得と日付整形などを確認できます。
+
+## パターン別ヒット率
+
+- `/api/v1/lottery_hit_rates?limit=100&offset=0` から `next_url` をたどって全件取得し、`lottery_type` と `pattern` の組み合わせで予想一覧に対応付けます。
+- ミニロト・ロト6・ロト7の一覧に「ヒット率（3個以上一致）」と集計件数を表示します。APIの `hit_rate` は0〜100の数値なので、`12.5` は `12.5%`、`0` は `0%` と表示します。表示値は各パターンの最新の過去集計で、行の対象抽選日に限定した値ではありません。
+- ナンバーズ3・4はAPIの対象外なのでヒット率の列を表示しません。対応する集計がないパターンや集計件数0件は「未集計」、取得中は「取得中…」と表示します。
+- ヒット率は予想一覧とは独立して取得します。通信・検証エラー時も予想一覧は表示し、対象タブに「ヒット率の取得に失敗しました。」と「ヒット率を再取得」ボタンを表示します。予想一覧の「再試行」でもヒット率を再取得します。
+- `npm test` でページング・型検証・0%・種別の対応付け・不完全な取得・URL循環・キャンセルを確認します。`node tests/browser/hit-rates.browser.mjs` でモックAPIを使った画面表示・タブ切替・再取得・モバイル表示を確認できます（`playwright-core` と Edge が必要）。
 
 ## 更新状況パネル
 

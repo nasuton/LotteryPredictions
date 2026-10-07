@@ -2,6 +2,9 @@ import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { usePredictions } from './hooks/usePredictions'
 import { useStatus } from './hooks/useStatus'
+import { useHitRates } from './hooks/useHitRates'
+import { supportsHitRate } from './lib/hitRates'
+import { PredictionHitRate } from './components/PredictionHitRate'
 import { FETCH_ERROR_MESSAGE } from './lib/api'
 import { buildPredictionsCsv, downloadCsv, predictionsCsvFileName } from './lib/csv'
 import { lotteries, predictionsForLottery } from './lib/predictions'
@@ -16,6 +19,7 @@ function App() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { state, retry } = usePredictions()
   const { state: statusState, reload: reloadStatus } = useStatus()
+  const { state: hitRateState, reload: reloadHitRates } = useHitRates()
   const activeLottery = lotteries.find((lottery) => lottery.id === activeTab) ?? lotteries[0]
   const isLoading = state.phase === 'checking' || state.phase === 'loading'
   const statusLabel = { checking: '確認中', loading: '取得中', success: 'OK', error: '通信エラー' }[state.phase]
@@ -31,6 +35,7 @@ function App() {
   function handleRetry() {
     retry()
     reloadStatus()
+    reloadHitRates()
   }
 
   function handleDownloadCsv(lottery: (typeof lotteries)[number], rows: Prediction[]) {
@@ -110,6 +115,7 @@ function App() {
           </div>
 
           {lotteries.map((lottery) => {
+            const showHitRate = supportsHitRate(lottery.id)
             const rows = state.phase === 'success'
               ? predictionsForLottery(state.predictions, lottery.id)
               : []
@@ -139,13 +145,25 @@ function App() {
                     </button>
                   )}
                 </div>
+                {showHitRate && (
+                  <div className="hit-rate-notice">
+                    <p>ヒット率は、各予想パターンの過去の集計における3個以上一致率です（最新の集計値）。</p>
+                    {hitRateState.phase === 'error' && (
+                      <div className="hit-rate-error">
+                        <p role="alert">ヒット率の取得に失敗しました。</p>
+                        <button type="button" className="retry-button" onClick={reloadHitRates}>ヒット率を再取得</button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {state.phase === 'success' && rows.length > 0 ? (
-                  <table className="prediction-table" aria-label={`${lottery.name}の予想一覧`}>
+                  <table className={`prediction-table${showHitRate ? ' prediction-table--hit-rates' : ''}`} aria-label={`${lottery.name}の予想一覧`}>
                     <thead>
                       <tr>
                         <th scope="col">予想パターン</th>
                         <th scope="col">予想数字</th>
                         <th scope="col">対象抽選日</th>
+                        {showHitRate && <th scope="col">ヒット率<br />（3個以上一致）</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -161,6 +179,7 @@ function App() {
                             </div>
                           </td>
                           <td><time dateTime={prediction.predicted_at}>{prediction.predicted_at.replaceAll('-', '/')}</time></td>
+                          {showHitRate && <td><PredictionHitRate state={hitRateState} prediction={prediction} /></td>}
                         </tr>
                       ))}
                     </tbody>
