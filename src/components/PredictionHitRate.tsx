@@ -1,5 +1,5 @@
 import type { HitRateState } from '../hooks/useHitRates'
-import { formatHitRate, hitRateKey } from '../lib/hitRates'
+import { formatHitRate, hitRateKey, matchRateColumnsForLottery } from '../lib/hitRates'
 import type { Prediction } from '../lib/predictions'
 
 export function PredictionHitRate({ state, prediction }: { state: HitRateState; prediction: Prediction }) {
@@ -11,8 +11,17 @@ export function PredictionHitRate({ state, prediction }: { state: HitRateState; 
 
   return (
     <div className="hit-rate-value">
+      <span className="hit-rate-summary-label">3個以上一致</span>
       <strong>{formatHitRate(rate.hit_rate)}</strong>
       <span className="hit-rate-count">集計 {rate.prediction_count.toLocaleString('ja-JP')}件</span>
+      <dl className="hit-rate-breakdown">
+        {matchRateColumnsForLottery(rate.lottery_type).map(({ count, field }) => (
+          <div key={field}>
+            <dt>{count}個一致</dt>
+            <dd>{rate[field] === null ? '未集計' : formatHitRate(rate[field])}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }

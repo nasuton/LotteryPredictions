@@ -350,19 +350,19 @@
 }
 
 .prediction-table--hit-rates th:first-child {
-  width: 32%;
-}
-
-.prediction-table--hit-rates th:nth-child(2) {
   width: 30%;
 }
 
+.prediction-table--hit-rates th:nth-child(2) {
+  width: 28%;
+}
+
 .prediction-table--hit-rates th:nth-child(3) {
-  width: 20%;
+  width: 18%;
 }
 
 .prediction-table--hit-rates th:last-child {
-  width: 18%;
+  width: 24%;
 }
 
 .hit-rate-value {
@@ -372,9 +372,39 @@
 }
 
 .hit-rate-count,
+.hit-rate-summary-label,
 .hit-rate-placeholder {
   color: var(--text-muted);
   font-size: 0.8125rem;
+}
+
+.hit-rate-breakdown {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.hit-rate-breakdown > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+
+.hit-rate-breakdown dt {
+  color: var(--text-muted);
+}
+
+.hit-rate-breakdown dd {
+  margin: 0;
+}
+
+.hit-rate-breakdown dt,
+.hit-rate-breakdown dd {
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
@@ -404,22 +434,24 @@
   }
 
   .prediction-table--hit-rates th:first-child {
-    width: 28%;
-  }
-
-  .prediction-table--hit-rates th:nth-child(2) {
-    width: 28%;
-  }
-
-  .prediction-table--hit-rates th:nth-child(3) {
     width: 24%;
   }
 
+  .prediction-table--hit-rates th:nth-child(2) {
+    width: 26%;
+  }
+
+  .prediction-table--hit-rates th:nth-child(3) {
+    width: 22%;
+  }
+
   .prediction-table--hit-rates th:last-child {
-    width: 20%;
+    width: 28%;
   }
 
   .hit-rate-count,
+  .hit-rate-summary-label,
+  .hit-rate-breakdown,
   .hit-rate-placeholder {
     font-size: 0.75rem;
   }

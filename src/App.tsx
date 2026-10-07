@@ -147,7 +147,7 @@ function App() {
                 </div>
                 {showHitRate && (
                   <div className="hit-rate-notice">
-                    <p>ヒット率は、各予想パターンの過去の集計における3個以上一致率です（最新の集計値）。</p>
+                    <p>各予想パターンの3個以上一致率と、一致数ごとの率を表示しています（過去の最新集計値）。</p>
                     {hitRateState.phase === 'error' && (
                       <div className="hit-rate-error">
                         <p role="alert">ヒット率の取得に失敗しました。</p>
@@ -163,7 +163,7 @@ function App() {
                         <th scope="col">予想パターン</th>
                         <th scope="col">予想数字</th>
                         <th scope="col">対象抽選日</th>
-                        {showHitRate && <th scope="col">ヒット率<br />（3個以上一致）</th>}
+                        {showHitRate && <th scope="col">ヒット率</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -178,7 +178,11 @@ function App() {
                               ))}
                             </div>
                           </td>
-                          <td><time dateTime={prediction.predicted_at}>{prediction.predicted_at.replaceAll('-', '/')}</time></td>
+                          <td>
+                            <time dateTime={prediction.predicted_at}>
+                              {prediction.predicted_at.slice(0, 4)}/<wbr />{prediction.predicted_at.slice(5).replace('-', '/')}
+                            </time>
+                          </td>
                           {showHitRate && <td><PredictionHitRate state={hitRateState} prediction={prediction} /></td>}
                         </tr>
                       ))}

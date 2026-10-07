@@ -8,6 +8,24 @@ export interface LotteryHitRate {
   pattern: string
   prediction_count: number
   hit_rate: number
+  match_3_rate: number
+  match_4_rate: number
+  match_5_rate: number
+  match_6_rate: number | null
+  match_7_rate: number | null
+}
+
+const matchRateColumns = [
+  { count: 3, field: 'match_3_rate' },
+  { count: 4, field: 'match_4_rate' },
+  { count: 5, field: 'match_5_rate' },
+  { count: 6, field: 'match_6_rate' },
+  { count: 7, field: 'match_7_rate' },
+] as const
+
+export function matchRateColumnsForLottery(lotteryId: HitRateLotteryId) {
+  const maxMatches = { miniloto: 5, loto6: 6, loto7: 7 }[lotteryId]
+  return matchRateColumns.filter((column) => column.count <= maxMatches)
 }
 
 export function supportsHitRate(lotteryId: LotteryId): lotteryId is HitRateLotteryId {
@@ -22,6 +40,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isPercentage(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+}
+
 export function parseHitRatePage(payload: unknown, requestUrl: string) {
   if (!isRecord(payload) || !Array.isArray(payload.data)) {
     throw new Error('Invalid hit rates response')
@@ -33,7 +55,12 @@ export function parseHitRatePage(payload: unknown, requestUrl: string) {
       (item.lottery_type !== 'miniloto' && item.lottery_type !== 'loto6' && item.lottery_type !== 'loto7') ||
       typeof item.pattern !== 'string' || !item.pattern.trim() ||
       typeof item.prediction_count !== 'number' || !Number.isSafeInteger(item.prediction_count) || item.prediction_count < 0 ||
-      typeof item.hit_rate !== 'number' || !Number.isFinite(item.hit_rate) || item.hit_rate < 0 || item.hit_rate > 100
+      !isPercentage(item.hit_rate) ||
+      !isPercentage(item.match_3_rate) ||
+      !isPercentage(item.match_4_rate) ||
+      !isPercentage(item.match_5_rate) ||
+      (item.lottery_type !== 'miniloto' && !isPercentage(item.match_6_rate)) ||
+      (item.lottery_type === 'loto7' && !isPercentage(item.match_7_rate))
     ) {
       throw new Error('Invalid hit rate record')
     }
@@ -42,6 +69,11 @@ export function parseHitRatePage(payload: unknown, requestUrl: string) {
       pattern: item.pattern,
       prediction_count: item.prediction_count,
       hit_rate: item.hit_rate,
+      match_3_rate: item.match_3_rate,
+      match_4_rate: item.match_4_rate,
+      match_5_rate: item.match_5_rate,
+      match_6_rate: item.lottery_type !== 'miniloto' ? item.match_6_rate as number : null,
+      match_7_rate: item.lottery_type === 'loto7' ? item.match_7_rate as number : null,
     }
   })
 
